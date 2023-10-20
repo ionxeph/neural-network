@@ -1,3 +1,4 @@
+use rand::Rng;
 use rulinalg::matrix;
 use rulinalg::matrix::Matrix;
 
@@ -5,14 +6,17 @@ mod helpers;
 use helpers::sigmoid;
 
 fn main() {
-    let inputs: Matrix<f32> = matrix![18.4;
-                        0.0];
-    let hidden_layer_weights: Matrix<f32> = matrix![1.0, 0.5;
-                                    0.5, 1.0];
-    let hidden_layer_biases: Matrix<f32> = matrix![1.1;
-                                    0.72];
-    let output_weights: Matrix<f32> = matrix![1.1, 0.72];
-    let output_biases: Matrix<f32> = matrix![1.1];
+    let target = 1.0;
+    let inputs: Matrix<f32> = matrix![sigmoid(18.4);
+    sigmoid(0.0)];
+    let mut rng = rand::thread_rng();
+
+    let hidden_layer_weights: Matrix<f32> = matrix![rng.gen(), rng.gen();
+    rng.gen(), rng.gen()];
+    let hidden_layer_biases: Matrix<f32> = matrix![rng.gen();
+    rng.gen()];
+    let output_weights: Matrix<f32> = matrix![rng.gen(), rng.gen()];
+    let output_biases: Matrix<f32> = matrix![rng.gen()];
 
     let hidden_layer_output: Matrix<f32> = Matrix::new(
         2,
@@ -35,5 +39,6 @@ fn main() {
             .collect::<Vec<f32>>(),
     );
 
-    dbg!(&output);
+    dbg!(&output.data()[0]);
+    dbg!((target - output.data()[0]).powf(2.0) / 2.0); // cost
 }
