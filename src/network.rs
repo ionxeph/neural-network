@@ -1,5 +1,7 @@
 use rand::Rng;
 use rulinalg::matrix::{BaseMatrix, Matrix};
+use serde::Serialize;
+use serde_json::Error;
 
 use crate::helpers;
 use helpers::{d_sigmoid, get_weight_delta, sigmoid};
@@ -120,10 +122,32 @@ impl Network {
         }
     }
 
-    pub fn output_data(&self) {
-        // weights: arr[{rows: usize, cols: usize, data: arr[]}]
-        // biases: arr[{rows: usize, cols: 1, data: arr[]}]
-        // weights.len() = biases.len()
+    pub fn output_data(&self, file_name: &str) -> std::result::Result<(), Error> {
+        let mut weights: Vec<WeightData> = Vec::new();
+        let mut biases: Vec<BiasData> = Vec::new();
+        for layer in 0..self.biases.len() {
+            let weight_rows = self.weights[layer].rows();
+            let weight_cols = self.weights[layer].cols();
+            let weight_data = self.weights[layer].clone().into_vec();
+            let bias_rows = self.biases[layer].rows();
+            let bias_data = self.biases[layer].clone().into_vec();
+            weights.push(WeightData {
+                rows: weight_rows,
+                cols: weight_cols,
+                data: weight_data,
+            });
+            biases.push(BiasData {
+                rows: bias_rows,
+                data: bias_data,
+            });
+        }
+        let data = NetworkData { weights, biases };
+
+        let json = serde_json::to_string(&data)?;
+
+        std::fs::write(format!("{}.json", file_name), json).expect("Unable to write file");
+
+        Ok(())
     }
 }
 
@@ -132,4 +156,24 @@ pub struct TrainingData {
     pub inputs: Vec<f32>,
     pub target: Vec<f32>,
     pub classification: u8,
+}
+
+#[derive(Serialize)]
+struct NetworkData {
+    weights: Vec<WeightData>,
+    biases: Vec<BiasData>,
+}
+
+#[derive(Serialize)]
+struct WeightData {
+    rows: usize,
+    cols: usize,
+    data: Vec<f32>,
+}
+
+#[derive(Serialize)]
+struct BiasData {
+    rows: usize,
+    // cols is always 1
+    data: Vec<f32>,
 }

@@ -9,8 +9,6 @@ fn main() {
     let mut network = Network::new(vec![8, 8, 10], 784, 0.08);
 
     network.train(training_data);
-    // let data = training_data[0].clone();
-    // network.train(vec![data]);
 
     let accuracy_data = load_data("mnist/t10k").expect("Data not loaded correctly.");
     let mut correct: i32 = 0;
@@ -29,6 +27,10 @@ fn main() {
         }
     }
     println!("Accuracy: {} out of {}", correct, total);
+
+    network
+        .output_data("network-data/data")
+        .expect("Outputing to file failed.");
 }
 
 // let weather_code_normalize = |x: f32| -> f32 { x / 100.0 };
