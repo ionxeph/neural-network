@@ -84,8 +84,9 @@ impl Network {
                 (layer_output[last_layer_index].clone())
                     .into_vec()
                     .iter()
-                    .map(|output: &f32| {
-                        (data.target - *output) * d_sigmoid(*output) * self.learning_rate
+                    .enumerate()
+                    .map(|(i, output)| {
+                        (data.target[i] - *output) * d_sigmoid(*output) * self.learning_rate
                     })
                     .collect::<Vec<f32>>(),
             );
@@ -115,5 +116,5 @@ impl Network {
 
 pub struct TrainingData {
     pub inputs: Vec<f32>,
-    pub target: f32,
+    pub target: Vec<f32>,
 }
