@@ -6,9 +6,11 @@ use network::Network;
 
 fn main() {
     let training_data = load_data("mnist/train").expect("Data not loaded correctly.");
-    let mut network = Network::new(vec![8, 8, 10], 784, 2.0);
+    let mut network = Network::new(vec![8, 8, 10], 784, 0.08);
 
     network.train(training_data);
+    // let data = training_data[0].clone();
+    // network.train(vec![data]);
 
     let accuracy_data = load_data("mnist/t10k").expect("Data not loaded correctly.");
     let mut correct: i32 = 0;

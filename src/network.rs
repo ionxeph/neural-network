@@ -18,8 +18,12 @@ impl Network {
         let mut biases: Vec<Matrix<f32>> = Vec::with_capacity(layers.len());
         let mut prev_layer_outputs = number_of_inputs;
         for layer in layers {
-            weights.push(Matrix::from_fn(layer, prev_layer_outputs, |_, _| rng.gen()));
-            biases.push(Matrix::from_fn(layer, 1, |_, _| rng.gen()));
+            weights.push(Matrix::from_fn(layer, prev_layer_outputs, |_, _| {
+                rng.gen::<f32>() - rng.gen::<f32>()
+            }));
+            biases.push(Matrix::from_fn(layer, 1, |_, _| {
+                rng.gen::<f32>() - rng.gen::<f32>()
+            }));
             prev_layer_outputs = layer;
         }
         Network {
@@ -58,10 +62,6 @@ impl Network {
 
     pub fn train(&mut self, training_data: Vec<TrainingData>) {
         for (completed, data) in training_data.into_iter().enumerate() {
-            if completed % 6000 == 0 {
-                println!("Completed {} iterations", completed);
-                dbg!(&self.weights[2]);
-            }
             // feed-forward
             let mut layer_output: Vec<Matrix<f32>> =
                 vec![Matrix::new(data.inputs.len(), 1, data.inputs)];
@@ -114,7 +114,16 @@ impl Network {
                 self.weights[i] =
                     &self.weights[i] + get_weight_delta(&layer_output[i], &layer_gradients[i + 1]);
             }
+            if completed % 6000 == 0 {
+                println!("Completed {} iterations", completed);
+            }
         }
+    }
+
+    pub fn output_data(&self) {
+        // weights: arr[{rows: usize, cols: usize, data: arr[]}]
+        // biases: arr[{rows: usize, cols: 1, data: arr[]}]
+        // weights.len() = biases.len()
     }
 }
 
