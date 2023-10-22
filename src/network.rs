@@ -57,7 +57,11 @@ impl Network {
     }
 
     pub fn train(&mut self, training_data: Vec<TrainingData>) {
-        for data in training_data {
+        for (completed, data) in training_data.into_iter().enumerate() {
+            if completed % 6000 == 0 {
+                println!("Completed {} iterations", completed);
+                dbg!(&self.weights[2]);
+            }
             // feed-forward
             let mut layer_output: Vec<Matrix<f32>> =
                 vec![Matrix::new(data.inputs.len(), 1, data.inputs)];
@@ -114,7 +118,9 @@ impl Network {
     }
 }
 
+#[derive(Clone)]
 pub struct TrainingData {
     pub inputs: Vec<f32>,
     pub target: Vec<f32>,
+    pub classification: u8,
 }
