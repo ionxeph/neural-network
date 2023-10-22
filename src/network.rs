@@ -63,7 +63,7 @@ impl Network {
     }
 
     pub fn train(&mut self, training_data: Vec<TrainingData>) {
-        for (completed, data) in training_data.into_iter().enumerate() {
+        for data in training_data.into_iter() {
             // feed-forward
             let mut layer_output: Vec<Matrix<f32>> =
                 vec![Matrix::new(data.inputs.len(), 1, data.inputs)];
@@ -115,9 +115,6 @@ impl Network {
             for i in 0..self.weights.len() {
                 self.weights[i] =
                     &self.weights[i] + get_weight_delta(&layer_output[i], &layer_gradients[i + 1]);
-            }
-            if completed % 6000 == 0 {
-                println!("Completed {} iterations", completed);
             }
         }
     }

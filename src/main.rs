@@ -5,7 +5,7 @@ mod network;
 use network::{Network, NetworkData};
 use serde_json::Error;
 
-const LEARNING_RATE: f32 = 0.02;
+const LEARNING_RATE: f32 = 0.05;
 
 fn main() -> std::result::Result<(), Error> {
     let network_data: Option<NetworkData> = match std::fs::read_to_string("network-data/data.json")
