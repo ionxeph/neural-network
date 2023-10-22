@@ -5,7 +5,7 @@ mod network;
 use network::{Network, NetworkData};
 use serde_json::Error;
 
-const LEARNING_RATE: f32 = 0.05;
+const LEARNING_RATE: f64 = 0.05;
 
 fn main() -> std::result::Result<(), Error> {
     let network_data: Option<NetworkData> = match std::fs::read_to_string("network-data/data.json")
@@ -65,8 +65,8 @@ fn main() -> std::result::Result<(), Error> {
     Ok(())
 }
 
-// let weather_code_normalize = |x: f32| -> f32 { x / 100.0 };
-//     let temperature_normalize = |x: f32| -> f32 { x / 35.0 };
+// let weather_code_normalize = |x: f64| -> f64 { x / 100.0 };
+//     let temperature_normalize = |x: f64| -> f64 { x / 35.0 };
 //     let mut data = vec![
 //         TrainingData {
 //             inputs: vec![temperature_normalize(18.4), weather_code_normalize(0.0)],

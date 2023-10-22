@@ -8,19 +8,19 @@ use std::{
 
 use crate::network::TrainingData;
 
-pub fn sigmoid(x: f32) -> f32 {
-    1.0 / (1.0 + (std::f64::consts::E as f32).powf(-x))
+pub fn sigmoid(x: f64) -> f64 {
+    1.0 / (1.0 + std::f64::consts::E.powf(-x))
 }
 
 // derivative of sigmoid(x), where y is sigmoid(x)
-pub fn d_sigmoid(y: f32) -> f32 {
+pub fn d_sigmoid(y: f64) -> f64 {
     y * (1.0 - y)
 }
 
-pub fn get_weight_delta(m1: &Matrix<f32>, m2: &Matrix<f32>) -> Matrix<f32> {
+pub fn get_weight_delta(m1: &Matrix<f64>, m2: &Matrix<f64>) -> Matrix<f64> {
     let m1 = m1.clone().into_vec();
     let m2 = m2.clone().into_vec();
-    let mut result_arr: Vec<f32> = Vec::with_capacity(m1.len() * m2.len());
+    let mut result_arr: Vec<f64> = Vec::with_capacity(m1.len() * m2.len());
     (0..m2.len()).for_each(|i| {
         (0..m1.len()).for_each(|j| {
             //
@@ -72,13 +72,13 @@ pub fn load_data(dataset_name: &str) -> Result<Vec<TrainingData>, std::io::Error
     let label_data = &MnistData::new(&(File::open(filename))?)?;
     let filename = format!("{}-images-idx3-ubyte.gz", dataset_name);
     let images_data = &MnistData::new(&(File::open(filename))?)?;
-    let mut images: Vec<Vec<f32>> = Vec::new();
+    let mut images: Vec<Vec<f64>> = Vec::new();
     let image_shape = (images_data.sizes[1] * images_data.sizes[2]) as usize;
 
     for i in 0..images_data.sizes[0] as usize {
         let start = i * image_shape;
         let image_data = images_data.data[start..start + image_shape].to_vec();
-        let image_data: Vec<f32> = image_data.into_iter().map(|x| x as f32 / 255.).collect();
+        let image_data: Vec<f64> = image_data.into_iter().map(|x| x as f64 / 255.).collect();
         images.push(image_data);
     }
 
