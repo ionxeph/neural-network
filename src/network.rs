@@ -63,6 +63,7 @@ impl Network {
     }
 
     pub fn train(&mut self, training_data: Vec<TrainingData>) {
+        // TODO: implement batching and pruning
         for data in training_data.into_iter() {
             // feed-forward
             let mut layer_output: Vec<Matrix<f64>> =
