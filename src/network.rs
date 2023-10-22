@@ -1,6 +1,6 @@
 use rand::Rng;
 use rulinalg::matrix::{BaseMatrix, Matrix};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Error;
 
 use crate::helpers;
@@ -149,6 +149,28 @@ impl Network {
 
         Ok(())
     }
+
+    pub fn from_data(data: NetworkData, learning_rate: f32) -> Self {
+        let mut weights: Vec<Matrix<f32>> = Vec::with_capacity(data.weights.len());
+        let mut biases: Vec<Matrix<f32>> = Vec::with_capacity(data.biases.len());
+        for layer in 0..data.weights.len() {
+            weights.push(Matrix::new(
+                data.weights[layer].rows,
+                data.weights[layer].cols,
+                data.weights[layer].data.clone(),
+            ));
+            biases.push(Matrix::new(
+                data.biases[layer].rows,
+                1,
+                data.biases[layer].data.clone(),
+            ));
+        }
+        Network {
+            weights,
+            biases,
+            learning_rate,
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -158,20 +180,20 @@ pub struct TrainingData {
     pub classification: u8,
 }
 
-#[derive(Serialize)]
-struct NetworkData {
+#[derive(Serialize, Deserialize)]
+pub struct NetworkData {
     weights: Vec<WeightData>,
     biases: Vec<BiasData>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 struct WeightData {
     rows: usize,
     cols: usize,
     data: Vec<f32>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 struct BiasData {
     rows: usize,
     // cols is always 1

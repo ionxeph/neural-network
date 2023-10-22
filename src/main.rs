@@ -2,12 +2,42 @@ mod helpers;
 use helpers::load_data;
 
 mod network;
-use network::Network;
+use network::{Network, NetworkData};
+use serde_json::Error;
 
-fn main() {
+const LEARNING_RATE: f32 = 0.02;
+
+fn main() -> std::result::Result<(), Error> {
+    let network_data: Option<NetworkData> = match std::fs::read_to_string("network-data/data.json")
+    {
+        Ok(data) => Some(serde_json::from_str(&data)?),
+        Err(_) => None,
+    };
+    let mut network: Network;
+    if let Some(data) = network_data {
+        network = Network::from_data(data, LEARNING_RATE)
+    } else {
+        network = Network::new(vec![8, 8, 10], 784, LEARNING_RATE);
+    }
+    let accuracy_data = load_data("mnist/t10k").expect("Data not loaded correctly.");
+    let mut correct: i32 = 0;
+    let total = accuracy_data.len();
+    for data in accuracy_data.into_iter() {
+        let correct_val = &data.classification;
+        let calc = network.feed_forward(data.inputs);
+        let mut guess: u8 = 0;
+        for i in 0..calc.len() {
+            if calc[i] > calc[guess as usize] {
+                guess = i as u8;
+            }
+        }
+        if &guess == correct_val {
+            correct += 1;
+        }
+    }
+    println!("Before accuracy: {} out of {}", correct, total);
+
     let training_data = load_data("mnist/train").expect("Data not loaded correctly.");
-    let mut network = Network::new(vec![8, 8, 10], 784, 0.08);
-
     network.train(training_data);
 
     let accuracy_data = load_data("mnist/t10k").expect("Data not loaded correctly.");
@@ -26,11 +56,13 @@ fn main() {
             correct += 1;
         }
     }
-    println!("Accuracy: {} out of {}", correct, total);
+    println!("After accuracy: {} out of {}", correct, total);
 
     network
         .output_data("network-data/data")
         .expect("Outputing to file failed.");
+
+    Ok(())
 }
 
 // let weather_code_normalize = |x: f32| -> f32 { x / 100.0 };
