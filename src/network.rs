@@ -62,61 +62,105 @@ impl Network {
         layer_output.into_vec()
     }
 
-    pub fn train(&mut self, training_data: Vec<TrainingData>) {
-        // TODO: implement batching and pruning
-        for data in training_data.into_iter() {
-            // feed-forward
-            let mut layer_output: Vec<Matrix<f64>> =
-                vec![Matrix::new(data.inputs.len(), 1, data.inputs)];
-            for layer in 0..self.biases.len() {
-                layer_output.push(Matrix::new(
-                    self.biases[layer].rows(),
-                    1,
-                    (&self.weights[layer] * &layer_output[layer] + &self.biases[layer])
-                        .into_vec()
-                        .iter()
-                        .map(|x| sigmoid(*x))
-                        .collect::<Vec<f64>>(),
-                ));
-            }
+    pub fn train(&mut self, training_data: Vec<TrainingData>, batch_size: usize, epoch: usize) {
+        let now = std::time::Instant::now();
+        let data_len = training_data.len();
+        let mut summed_layer_output: Vec<Matrix<f64>> = Vec::new();
+        let mut summed_target: Vec<f64> = Vec::new();
+        // TODO: implement pruning
+        for epoch_i in 0..epoch {
+            for (idx, data) in training_data.iter().enumerate() {
+                // feed-forward
+                let mut layer_output: Vec<Matrix<f64>> =
+                    vec![Matrix::new(data.inputs.len(), 1, data.inputs.clone())];
+                for layer in 0..self.biases.len() {
+                    layer_output.push(Matrix::new(
+                        self.biases[layer].rows(),
+                        1,
+                        (&self.weights[layer] * &layer_output[layer] + &self.biases[layer])
+                            .into_vec()
+                            .iter()
+                            .map(|x| sigmoid(*x))
+                            .collect::<Vec<f64>>(),
+                    ));
+                }
+                if summed_layer_output.is_empty() {
+                    summed_layer_output = layer_output.clone();
+                } else {
+                    for i in 1..summed_layer_output.len() {
+                        summed_layer_output[i] += layer_output[i].clone();
+                    }
+                }
+                if summed_target.is_empty() {
+                    summed_target = data.target.clone();
+                } else {
+                    (0..summed_target.len()).for_each(|i| {
+                        summed_target[i] += data.target.clone()[i];
+                    });
+                }
 
-            // back-propagate
-            let mut layer_gradients: Vec<Matrix<f64>> =
-                vec![Matrix::<f64>::zeros(1, 1); layer_output.len()];
-            // last layer, aka output layer, gets special calculation
-            let last_layer_index = layer_output.len() - 1;
-            layer_gradients[last_layer_index] = Matrix::new(
-                layer_output[last_layer_index].rows(),
-                1,
-                (layer_output[last_layer_index].clone())
-                    .into_vec()
-                    .iter()
-                    .enumerate()
-                    .map(|(i, output)| {
-                        (data.target[i] - *output) * d_sigmoid(*output) * self.learning_rate
-                    })
-                    .collect::<Vec<f64>>(),
-            );
-            // will need to skip layer_gradients[0] as that's the inputs
-            for i in (1..last_layer_index).rev() {
-                layer_gradients[i] = Matrix::new(
-                    layer_output[i].rows(),
-                    1,
-                    (self.weights[i].transpose() * &layer_gradients[i + 1])
-                        .into_vec()
+                if idx > 0 && (idx + 1) % batch_size == 0 || idx == data_len {
+                    let mut avg_layer_output: Vec<Matrix<f64>> =
+                        Vec::with_capacity(summed_layer_output.len());
+                    for layer in summed_layer_output.into_iter() {
+                        avg_layer_output.push(Matrix::new(
+                            layer.rows(),
+                            1,
+                            layer
+                                .into_vec()
+                                .iter()
+                                .map(|x| x / batch_size as f64)
+                                .collect::<Vec<f64>>(),
+                        ));
+                    }
+                    let avg_target: Vec<f64> = summed_target
                         .iter()
-                        .map(|x: &f64| d_sigmoid(*x) * self.learning_rate)
-                        .collect::<Vec<f64>>(),
-                );
-            }
+                        .map(|target| target / batch_size as f64)
+                        .collect();
 
-            for i in 0..self.biases.len() {
-                self.biases[i] = &self.biases[i] + &layer_gradients[i + 1];
+                    // back-propagate
+                    let mut layer_gradients: Vec<Matrix<f64>> =
+                        vec![Matrix::<f64>::zeros(1, 1); avg_layer_output.len()];
+                    // last layer, aka output layer, gets special calculation
+                    let last_layer_index = avg_layer_output.len() - 1;
+                    layer_gradients[last_layer_index] = Matrix::new(
+                        avg_layer_output[last_layer_index].rows(),
+                        1,
+                        (avg_layer_output[last_layer_index].clone())
+                            .into_vec()
+                            .iter()
+                            .enumerate()
+                            .map(|(i, output)| {
+                                (avg_target[i] - *output) * d_sigmoid(*output) * self.learning_rate
+                            })
+                            .collect::<Vec<f64>>(),
+                    );
+                    // will need to skip layer_gradients[0] as that's the inputs
+                    for i in (1..last_layer_index).rev() {
+                        layer_gradients[i] = Matrix::new(
+                            avg_layer_output[i].rows(),
+                            1,
+                            (self.weights[i].transpose() * &layer_gradients[i + 1])
+                                .into_vec()
+                                .iter()
+                                .map(|x: &f64| d_sigmoid(*x) * self.learning_rate)
+                                .collect::<Vec<f64>>(),
+                        );
+                    }
+
+                    for i in 0..self.biases.len() {
+                        self.biases[i] = &self.biases[i] + &layer_gradients[i + 1];
+                    }
+                    for i in 0..self.weights.len() {
+                        self.weights[i] = &self.weights[i]
+                            + get_weight_delta(&avg_layer_output[i], &layer_gradients[i + 1]);
+                    }
+
+                    summed_layer_output = Vec::new();
+                    summed_target = Vec::new();
+                }
             }
-            for i in 0..self.weights.len() {
-                self.weights[i] =
-                    &self.weights[i] + get_weight_delta(&layer_output[i], &layer_gradients[i + 1]);
-            }
+            println!("Completed epoch {} in {:.2?}", epoch_i + 1, now.elapsed());
         }
     }
 

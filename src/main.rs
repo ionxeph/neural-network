@@ -19,6 +19,7 @@ fn main() -> std::result::Result<(), Error> {
     } else {
         network = Network::new(vec![8, 8, 10], 784, LEARNING_RATE);
     }
+
     let accuracy_data = load_data("mnist/t10k").expect("Data not loaded correctly.");
     let mut correct: i32 = 0;
     let total = accuracy_data.len();
@@ -38,7 +39,8 @@ fn main() -> std::result::Result<(), Error> {
     println!("Before accuracy: {} out of {}", correct, total);
 
     let training_data = load_data("mnist/train").expect("Data not loaded correctly.");
-    network.train(training_data);
+    network.train(training_data, 1, 1);
+    // network.train(training_data.into_iter().skip(59000).collect());
 
     let accuracy_data = load_data("mnist/t10k").expect("Data not loaded correctly.");
     let mut correct: i32 = 0;
