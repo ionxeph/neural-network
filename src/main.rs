@@ -21,7 +21,7 @@ fn main() -> std::result::Result<(), Error> {
     }
 
     let accuracy_data = load_data("mnist/t10k").expect("Data not loaded correctly.");
-    let mut correct: i32 = 0;
+    let mut before: i32 = 0;
     let total = accuracy_data.len();
     for data in accuracy_data.clone().into_iter() {
         let correct_val = &data.classification;
@@ -33,16 +33,16 @@ fn main() -> std::result::Result<(), Error> {
             }
         }
         if &guess == correct_val {
-            correct += 1;
+            before += 1;
         }
     }
-    println!("Before accuracy: {} out of {}", correct, total);
+    println!("Before accuracy: {} out of {}", before, total);
 
     let training_data = load_data("mnist/train").expect("Data not loaded correctly.");
-    network.train(training_data, 50, 10);
+    network.train(training_data, 50, 1);
     // network.train(training_data.into_iter().skip(59990).collect(), 10, 1);
 
-    let mut correct: i32 = 0;
+    let mut after: i32 = 0;
     let total = accuracy_data.len();
     for data in accuracy_data.into_iter() {
         let correct_val = &data.classification;
@@ -54,14 +54,21 @@ fn main() -> std::result::Result<(), Error> {
             }
         }
         if &guess == correct_val {
-            correct += 1;
+            after += 1;
         }
     }
-    println!("After accuracy: {} out of {}", correct, total);
+    println!("After accuracy: {} out of {}", after, total);
 
-    network
-        .output_data("network-data/data")
-        .expect("Outputing to file failed.");
+    if after > before {
+        println!("Model improved, saving to file.");
+        let network_data = network.output_data();
+
+        let json = serde_json::to_string(&network_data)?;
+
+        std::fs::write("network-data/data.json", json).expect("Unable to write file");
+    } else {
+        println!("You fucked up, not saving to file.");
+    }
 
     Ok(())
 }

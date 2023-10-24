@@ -1,7 +1,6 @@
 use rand::Rng;
 use rulinalg::matrix::{BaseMatrix, Matrix};
 use serde::{Deserialize, Serialize};
-use serde_json::Error;
 
 use crate::helpers;
 use helpers::{d_sigmoid, get_weight_delta, sigmoid};
@@ -164,7 +163,7 @@ impl Network {
         }
     }
 
-    pub fn output_data(&self, file_name: &str) -> std::result::Result<(), Error> {
+    pub fn output_data(&self) -> NetworkData {
         let mut weights: Vec<WeightData> = Vec::new();
         let mut biases: Vec<BiasData> = Vec::new();
         for layer in 0..self.biases.len() {
@@ -183,13 +182,7 @@ impl Network {
                 data: bias_data,
             });
         }
-        let data = NetworkData { weights, biases };
-
-        let json = serde_json::to_string(&data)?;
-
-        std::fs::write(format!("{}.json", file_name), json).expect("Unable to write file");
-
-        Ok(())
+        NetworkData { weights, biases }
     }
 
     pub fn from_data(data: NetworkData, learning_rate: f64) -> Self {
@@ -215,6 +208,7 @@ impl Network {
     }
 }
 
+// RELU training, doesn't quite work
 // impl Network {
 //     pub fn feed_forward_relu(&self, inputs: Vec<f64>) -> Vec<f64> {
 //         if self.weights.is_empty() {
