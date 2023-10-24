@@ -17,13 +17,23 @@ pub fn d_sigmoid(y: f64) -> f64 {
     y * (1.0 - y)
 }
 
+// pub fn relu(x: f64) -> f64 {
+//     f64::max(x, 0.0)
+// }
+
+// pub fn d_relu(y: f64) -> f64 {
+//     if y == 0.0 {
+//         return 0.0;
+//     }
+//     1.0
+// }
+
 pub fn get_weight_delta(m1: &Matrix<f64>, m2: &Matrix<f64>) -> Matrix<f64> {
     let m1 = m1.clone().into_vec();
     let m2 = m2.clone().into_vec();
     let mut result_arr: Vec<f64> = Vec::with_capacity(m1.len() * m2.len());
     (0..m2.len()).for_each(|i| {
         (0..m1.len()).for_each(|j| {
-            //
             result_arr.push(m2[i] * m1[j]);
         });
     });
