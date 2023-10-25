@@ -17,6 +17,13 @@ pub fn d_sigmoid(y: f64) -> f64 {
     y * (1.0 - y)
 }
 
+// TODO: use softmax in relu
+pub fn softmax(z: Vec<f64>) -> Vec<f64> {
+    let exp: Vec<f64> = z.into_iter().map(|x| std::f64::consts::E.powf(x)).collect();
+    let sum: f64 = exp.iter().sum();
+    exp.into_iter().map(|x| x / sum).collect()
+}
+
 // pub fn relu(x: f64) -> f64 {
 //     f64::max(x, 0.0)
 // }

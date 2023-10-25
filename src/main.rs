@@ -5,8 +5,8 @@ mod network;
 use network::{Network, NetworkData};
 use serde_json::Error;
 
-const LEARNING_RATE: f64 = 0.015;
-const BATCH_SIZE: usize = 20;
+const LEARNING_RATE: f64 = 0.03;
+const BATCH_SIZE: usize = 5;
 const EPOCH: usize = 1;
 const LOOP_COUNT: usize = 10;
 

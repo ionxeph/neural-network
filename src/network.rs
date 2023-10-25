@@ -69,13 +69,14 @@ impl Network {
 
     pub fn train(&mut self, training_data: Vec<TrainingData>, batch_size: usize, epoch: usize) {
         let now = std::time::Instant::now();
+        let data_len = training_data.len();
         for epoch_i in 0..epoch {
             let mut summed_gradients: Arc<Mutex<Vec<Matrix<f64>>>> =
                 Arc::new(Mutex::new(Vec::new()));
             let mut summed_weight_deltas: Arc<Mutex<Vec<Matrix<f64>>>> =
                 Arc::new(Mutex::new(Vec::new()));
             let mut handles = vec![];
-            for data in training_data.iter() {
+            for (i, data) in training_data.iter().enumerate() {
                 // feed-forward
                 let mut layer_outputs: Vec<Matrix<f64>> =
                     vec![Matrix::new(data.inputs.len(), 1, data.inputs.clone())];
@@ -118,7 +119,7 @@ impl Network {
                 });
                 handles.push(handle);
 
-                if handles.len() == batch_size {
+                if handles.len() == batch_size || i == data_len - 1 {
                     for handle in handles {
                         handle.join().expect("Threading mess.");
                     }
