@@ -6,6 +6,9 @@ use network::{Network, NetworkData};
 use serde_json::Error;
 
 const LEARNING_RATE: f64 = 0.03;
+const BATCH_SIZE: usize = 10;
+const EPOCH: usize = 1;
+const LOOP_COUNT: usize = 1;
 
 fn main() -> std::result::Result<(), Error> {
     let args: Vec<String> = std::env::args().collect();
@@ -45,11 +48,8 @@ fn main() -> std::result::Result<(), Error> {
         let mut loop_counter: usize = 0;
         loop {
             loop_counter += 1;
-            if loop_counter == 10 {
-                break;
-            }
             println!("Starting loop {}.", loop_counter);
-            network.train(training_data.clone(), 10, 1);
+            network.train(training_data.clone(), BATCH_SIZE, EPOCH);
 
             let mut after: i32 = 0;
             let total = accuracy_data.len();
@@ -80,6 +80,9 @@ fn main() -> std::result::Result<(), Error> {
                 break;
             }
             before = after;
+            if loop_counter == LOOP_COUNT {
+                break;
+            }
         }
     }
     Ok(())

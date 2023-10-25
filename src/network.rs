@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::helpers;
 use helpers::{d_sigmoid, get_weight_delta, sigmoid};
 
+// TODO: implement pruning
 #[derive(Debug)]
 pub struct Network {
     weights: Vec<Matrix<f64>>,
@@ -66,7 +67,6 @@ impl Network {
         let data_len = training_data.len();
         let mut summed_layer_gradients: Vec<Matrix<f64>> = Vec::new();
         let mut summed_weight_deltas: Vec<Matrix<f64>> = Vec::new();
-        // TODO: implement pruning
         for epoch_i in 0..epoch {
             for (idx, data) in training_data.iter().enumerate() {
                 // feed-forward
@@ -83,35 +83,9 @@ impl Network {
                             .collect::<Vec<f64>>(),
                     ));
                 }
-                // calculate gradient
-                let mut layer_gradients: Vec<Matrix<f64>> =
-                    vec![Matrix::<f64>::zeros(1, 1); layer_outputs.len()];
-                // last layer, aka output layer, gets special calculation
-                let last_layer_index = layer_outputs.len() - 1;
-                layer_gradients[last_layer_index] = Matrix::new(
-                    layer_outputs[last_layer_index].rows(),
-                    1,
-                    (layer_outputs[last_layer_index].clone())
-                        .into_vec()
-                        .iter()
-                        .enumerate()
-                        .map(|(i, output)| {
-                            (data.target[i] - *output) * d_sigmoid(*output) * self.learning_rate
-                        })
-                        .collect::<Vec<f64>>(),
-                );
-                // will need to skip layer_gradients[0] as that's the inputs
-                for i in (1..last_layer_index).rev() {
-                    layer_gradients[i] = Matrix::new(
-                        layer_outputs[i].rows(),
-                        1,
-                        (self.weights[i].transpose() * &layer_gradients[i + 1])
-                            .into_vec()
-                            .iter()
-                            .map(|x: &f64| d_sigmoid(*x) * self.learning_rate)
-                            .collect::<Vec<f64>>(),
-                    );
-                }
+                let layer_gradients: Vec<Matrix<f64>> =
+                    self.calcualte_gradient(&layer_outputs, &data.target);
+
                 if summed_layer_gradients.is_empty() {
                     for i in 0..self.weights.len() {
                         summed_weight_deltas
@@ -187,9 +161,43 @@ impl Network {
             learning_rate,
         }
     }
+
+    fn calcualte_gradient(
+        &self,
+        layer_outputs: &Vec<Matrix<f64>>,
+        target: &[f64],
+    ) -> Vec<Matrix<f64>> {
+        let mut layer_gradients: Vec<Matrix<f64>> =
+            vec![Matrix::<f64>::zeros(1, 1); layer_outputs.len()];
+        // last layer, aka output layer, gets special calculation
+        let last_layer_index = layer_outputs.len() - 1;
+        layer_gradients[last_layer_index] = Matrix::new(
+            layer_outputs[last_layer_index].rows(),
+            1,
+            (layer_outputs[last_layer_index].clone())
+                .into_vec()
+                .iter()
+                .enumerate()
+                .map(|(i, output)| (target[i] - *output) * d_sigmoid(*output) * self.learning_rate)
+                .collect::<Vec<f64>>(),
+        );
+        // will need to skip layer_gradients[0] as that's the inputs
+        for i in (1..last_layer_index).rev() {
+            layer_gradients[i] = Matrix::new(
+                layer_outputs[i].rows(),
+                1,
+                (self.weights[i].transpose() * &layer_gradients[i + 1])
+                    .into_vec()
+                    .iter()
+                    .map(|x: &f64| d_sigmoid(*x) * self.learning_rate)
+                    .collect::<Vec<f64>>(),
+            );
+        }
+        layer_gradients
+    }
 }
 
-// RELU training, doesn't quite work
+// RELU training, doesn't quite work, need softmax for output layer probably
 // impl Network {
 //     pub fn feed_forward_relu(&self, inputs: Vec<f64>) -> Vec<f64> {
 //         if self.weights.is_empty() {
@@ -218,7 +226,6 @@ impl Network {
 //         layer_output.into_vec()
 //     }
 
-//     // TODO: either targets need to change, or output layer needs a softmax
 //     pub fn train_relu(
 //         &mut self,
 //         training_data: Vec<TrainingData>,
@@ -229,7 +236,6 @@ impl Network {
 //         let data_len = training_data.len();
 //         let mut summed_layer_output: Vec<Matrix<f64>> = Vec::new();
 //         let mut summed_target: Vec<f64> = Vec::new();
-//         // TODO: implement pruning
 //         for epoch_i in 0..epoch {
 //             for (idx, data) in training_data.iter().enumerate() {
 //                 // feed-forward
