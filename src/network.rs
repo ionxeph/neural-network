@@ -1,3 +1,8 @@
+use std::{
+    sync::{Arc, Mutex},
+    thread,
+};
+
 use rand::Rng;
 use rulinalg::matrix::{BaseMatrix, Matrix};
 use serde::{Deserialize, Serialize};
@@ -64,11 +69,13 @@ impl Network {
 
     pub fn train(&mut self, training_data: Vec<TrainingData>, batch_size: usize, epoch: usize) {
         let now = std::time::Instant::now();
-        let data_len = training_data.len();
-        let mut summed_layer_gradients: Vec<Matrix<f64>> = Vec::new();
-        let mut summed_weight_deltas: Vec<Matrix<f64>> = Vec::new();
         for epoch_i in 0..epoch {
-            for (idx, data) in training_data.iter().enumerate() {
+            let mut summed_gradients: Arc<Mutex<Vec<Matrix<f64>>>> =
+                Arc::new(Mutex::new(Vec::new()));
+            let mut summed_weight_deltas: Arc<Mutex<Vec<Matrix<f64>>>> =
+                Arc::new(Mutex::new(Vec::new()));
+            let mut handles = vec![];
+            for data in training_data.iter() {
                 // feed-forward
                 let mut layer_outputs: Vec<Matrix<f64>> =
                     vec![Matrix::new(data.inputs.len(), 1, data.inputs.clone())];
@@ -86,32 +93,47 @@ impl Network {
                 let layer_gradients: Vec<Matrix<f64>> =
                     self.calcualte_gradient(&layer_outputs, &data.target);
 
-                if summed_layer_gradients.is_empty() {
-                    for i in 0..self.weights.len() {
-                        summed_weight_deltas
-                            .push(get_weight_delta(&layer_outputs[i], &layer_gradients[i + 1]));
-                    }
-                    summed_layer_gradients = layer_gradients;
-                } else {
-                    for (i, gradient) in layer_gradients.into_iter().enumerate() {
-                        if i > 0 {
-                            summed_weight_deltas[i - 1] +=
-                                get_weight_delta(&layer_outputs[i - 1], &gradient);
-                        }
-                        summed_layer_gradients[i] += gradient;
-                    }
-                }
+                let cloned_gradients = Arc::clone(&summed_gradients);
+                let cloned_weights = Arc::clone(&summed_weight_deltas);
+                let layer_count = self.weights.len();
+                let handle = thread::spawn(move || {
+                    let mut summed = cloned_gradients.lock().expect("Mutex mess.");
+                    let mut weights = cloned_weights.lock().expect("Mutex mess.");
 
-                if idx > 0 && (idx + 1) % batch_size == 0 || idx == data_len {
+                    if summed.is_empty() {
+                        for i in 0..layer_count {
+                            (*weights)
+                                .push(get_weight_delta(&layer_outputs[i], &layer_gradients[i + 1]));
+                        }
+                        *summed = layer_gradients;
+                    } else {
+                        for (i, gradient) in layer_gradients.into_iter().enumerate() {
+                            if i > 0 {
+                                (*weights)[i - 1] +=
+                                    get_weight_delta(&layer_outputs[i - 1], &gradient);
+                            }
+                            (*summed)[i] += gradient;
+                        }
+                    }
+                });
+                handles.push(handle);
+
+                if handles.len() == batch_size {
+                    for handle in handles {
+                        handle.join().expect("Threading mess.");
+                    }
+                    handles = Vec::new();
                     for i in 0..self.biases.len() {
-                        self.biases[i] = &self.biases[i] + &summed_layer_gradients[i + 1];
+                        self.biases[i] = &self.biases[i]
+                            + &(*summed_gradients.lock().expect("Mutex mess."))[i + 1];
                     }
                     (0..self.weights.len()).for_each(|i| {
-                        self.weights[i] = &self.weights[i] + &summed_weight_deltas[i];
+                        self.weights[i] = &self.weights[i]
+                            + &(*summed_weight_deltas.lock().expect("Mutex mess."))[i];
                     });
 
-                    summed_layer_gradients = Vec::new();
-                    summed_weight_deltas = Vec::new();
+                    summed_gradients = Arc::new(Mutex::new(Vec::new()));
+                    summed_weight_deltas = Arc::new(Mutex::new(Vec::new()));
                 }
             }
             println!("Completed epoch {} in {:.2?}", epoch_i + 1, now.elapsed());
